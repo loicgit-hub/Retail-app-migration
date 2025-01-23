@@ -4,7 +4,7 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
+settings:
 - task: NodeTool@0
   inputs:
     versionSpec: '14.x'
@@ -14,3 +14,34 @@ steps:
     npm install
     npm test
   displayName: 'Install Dependencies and Run Tests'
+
+stages:
+- stage: BuildAndTest
+  jobs:
+  - job: Build
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '14.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm install
+        npm test
+      displayName: 'Install Dependencies and Run Tests'
+
+- stage: Deploy
+  dependsOn: BuildAndTest
+  jobs:
+  - deployment: DeployToDev
+    environment: 'Dev'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '<Your Service Connection Name>'
+              appType: 'webApp'
+              appName: 'nodejs-lab-app'
+              package: '$(System.DefaultWorkingDirectory)/**/*.zip'
